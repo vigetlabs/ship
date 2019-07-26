@@ -1,0 +1,59 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# vim: ft=sh
+
+app_task "setup" "prepare the server for deploy"
+
+setup_usage() {
+  cat <<-EOF
+
+Usage: ship setup [options]
+
+Perform server setup necessary for deploys.
+
+Options:
+
+  -e, --environment    environment to set up
+  -h, --help           output help information
+
+Environments:
+
+$(list_of_environments | sed 's/^/  /')
+
+EOF
+}
+
+setup_main() {
+  while [ $# -gt 0 ]; do
+    local arg="$1"
+
+    case "$arg" in
+      -h|--help)
+        setup_usage
+        exit
+        ;;
+
+      -e|--environment)
+        if [ -z "${2:-}" ]; then
+          abort "missing value for option: $arg"
+        fi
+
+        # shellcheck disable=SC2034
+        environment="$2"
+        shift
+        ;;
+
+      *)
+        abort "unknown option: $arg"
+        ;;
+    esac
+
+    shift
+  done
+
+  setup
+}
+
+setup() {
+  perform "clone_repo"
+}

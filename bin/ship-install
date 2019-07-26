@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly APP_ROOT="$(pwd)"
+export   APP_ROOT
+
+readonly SHIP_ROOT="$APP_ROOT/vendor/ship"
+export   SHIP_ROOT
+
+ship_repo="git@github.com:vigetlabs/ship.git"
+tmp_dir=
+
+trap cleanup EXIT
+
+cleanup() {
+  if [ -d "$tmp_dir" ]; then
+    rm -dr "$tmp_dir"
+  fi
+}
+
+check_for_existing_install() {
+  if [ -x "$APP_ROOT/bin/ship" ] && [ -f "$SHIP_ROOT/VERSION" ]; then
+    echo "Ship $(cat "$SHIP_ROOT/version") already seems to be installed."
+    echo
+    echo "  1. Found Ship executable at bin/ship"
+    echo "  2. Found Ship vendor directory at vendor/ship"
+    echo
+    echo "To install, remove these two locations and try again."
+    echo
+    echo "exiting..."
+
+    return 0
+  fi
+
+  return 1
+}
+
+install() {
+  if check_for_existing_install; then
+    exit 1
+  fi
+
+  tmp_dir="$(mktemp -d)"
+
+  echo "$tmp_dir"
+
+  git clone "$ship_repo" "$tmp_dir"
+}
+
+install "$@"

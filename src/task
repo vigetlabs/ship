@@ -1,0 +1,43 @@
+# shellcheck shell=bash
+# vim: ft=sh
+
+app_task() {
+  local fn="${1:?}"
+  local desc="${2:?}"
+
+  app_tasks+=( ["$fn"]="$desc" )
+}
+
+list_of_tasks() {
+  for name in "${!app_tasks[@]}"; do
+    local help="${app_tasks[$name]}"
+    printf "%-21s%s\\n" "$name" "$help"
+  done | sort
+}
+
+run_task() {
+  local main="${app_task:?}_main"
+
+  if ! type -t "$main" | grep -q "function"; then
+    abort "no main function defined for task '$app_task'"
+  fi
+
+  "$main" "$@"
+}
+
+hook() {
+  local cmd="${1:?}"
+
+  if type -t "$cmd" | grep -q "function"; then
+    info "Running hook: $cmd"
+    "$cmd"
+  fi
+}
+
+perform() {
+  local cmd="${1:?}"
+
+  hook "before_$cmd"
+  "$cmd"
+  hook "after_$cmd"
+}

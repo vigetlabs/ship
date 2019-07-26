@@ -1,0 +1,45 @@
+# shellcheck shell=bash
+# vim: ft=sh
+
+ship_command "clean-sockets" "purge persisted SSH sockets"
+
+clean_sockets_usage() {
+  cat <<-EOF
+$(version_line)
+
+Usage: ship clean-sockets [options]
+
+Removes all persisted SSH sockets in tmp/ship/sockets.
+
+Options:
+
+  -h, --help           output help information
+
+EOF
+}
+
+clean_sockets_main() {
+  shift
+
+  while [ $# -gt 0 ]; do
+    local arg="$1"
+
+    case "$arg" in
+      -h|--help)
+        clean_sockets_usage
+        exit
+        ;;
+
+      *)
+        abort "unknown option: $arg"
+        ;;
+    esac
+  done
+
+  clean_sockets
+}
+
+clean_sockets() {
+  # shellcheck disable=SC2154
+  rm -dr "$tmp_path/sockets"
+}

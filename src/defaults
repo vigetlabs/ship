@@ -1,0 +1,26 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2034
+# vim: ft=sh
+
+config_path="$APP_ROOT/etc/ship"
+tmp_path="$APP_ROOT/tmp/ship"
+log_file="$tmp_path/ship.log"
+sockets_path="$tmp_path/sockets"
+
+environment=
+user=
+host=
+path=
+repo=
+branch=origin/master
+
+keep_releases=10
+
+persist_socket=true
+
+declare -A shared_resources=()
+declare -A ship_commands=()
+declare -A app_tasks=()
+
+ship_command=
+app_task=

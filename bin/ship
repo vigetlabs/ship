@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+abspath() {
+  local src="${1:-}"
+  local dir
+  dir="$( dirname "$src" )"
+
+  while [ -h "$src" ]; do
+    src="$(readlink "$src")"
+    [[ $src != /* ]] && src="$dir/$src"
+    dir="$( cd -P "$( dirname "$src"  )" && pwd )"
+  done
+
+  cd "$dir/.." && pwd
+}
+
+readonly APP_ROOT="$(abspath "${BASH_SOURCE[0]}")"
+export   APP_ROOT
+
+readonly SHIP_ROOT="$APP_ROOT/vendor/ship"
+export   SHIP_ROOT
+
+# shellcheck source=../vendor/ship/src/ship
+. "$SHIP_ROOT/src/ship"
+
+ship "$@"

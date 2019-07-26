@@ -1,0 +1,84 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# vim: ft=sh
+
+clone_repo() {
+  info "Cloning $repo"
+  run "if [ ! -d $path/shared/cached-copy/.git ]; then git clone $repo $path/shared/cached-copy; fi"
+}
+
+init_deploy() {
+  shared_path="$path/shared"
+  source_path="$shared_path/cached-copy"
+  release_name="$(date +%Y%m%d%H%M%S)"
+  releases_path="$path/releases"
+  release_path="$releases_path/$release_name"
+}
+
+fetch_code() {
+  info "Fetching latest code"
+  run "cd $source_path && git fetch --all"
+}
+
+reset_head() {
+  info "Resetting HEAD to $branch"
+  run "cd $source_path && git reset --hard $branch"
+}
+
+create_release() {
+  info "Creating release $release_name"
+  run "mkdir $release_path"
+}
+
+sync_code() {
+  info "Syncing code to $release_name"
+  run "rsync -lrpt --exclude=.git $source_path/ $release_path"
+}
+
+mark_revision() {
+  local revision
+  revision=$(run "cd $source_path && git rev-parse --short HEAD")
+
+  info "Marking revision $revision"
+  run "echo $revision > $release_path/REVISION"
+}
+
+link_shared_resources() {
+  info "Linking shared resources"
+
+  local src
+  local target
+
+  # shellcheck disable=SC2154
+  for key in "${!shared_resources[@]}"; do
+    src="$(eval echo "$key")"
+    target="$(eval echo "${shared_resources[$key]}")"
+
+    run "ln -sfn $src $target"
+  done
+}
+
+clean_releases() {
+  # shellcheck disable=SC2154
+  info "Cleaning previous releases (keeping $keep_releases)"
+  run "ls -1dt $releases_path/* | tail -n +$((keep_releases + 1)) | xargs rm -rf"
+}
+
+load_environment() {
+  if [ -z "$environment" ]; then
+    abort "specify an environment"
+  fi
+
+  local file="$config_path/environments/$environment"
+
+  if [ ! -f "$file" ]; then
+    abort "unknown environment: $environment"
+  fi
+
+  # shellcheck disable=SC1090
+  . "$config_path/environments/$environment"
+}
+
+list_of_environments() {
+  find "$config_path/environments" -type f -exec basename '{}' \; | sort
+}

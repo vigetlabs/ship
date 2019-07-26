@@ -1,0 +1,23 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# vim: ft=sh
+
+# shellcheck disable=SC2034
+forward_agent=true
+
+# shellcheck source=../php
+. "$SHIP_ROOT/src/php"
+
+# shellcheck source=../node
+. "$SHIP_ROOT/src/node"
+
+# shellcheck source=../tasks/connect
+. "$SHIP_ROOT/src/tasks/connect"
+
+# shellcheck source=../tasks/setup
+. "$SHIP_ROOT/src/tasks/setup"
+
+for file in "$SHIP_ROOT/src/wp/tasks"/*; do
+  # shellcheck disable=SC1090
+  [ -f "$file" ] && . "$file"
+done

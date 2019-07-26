@@ -1,0 +1,57 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# vim: ft=sh
+
+app_task "connect" "connect to a host via SSH"
+
+connect_usage() {
+  cat <<-EOF
+
+Usage: ship connect [options]
+
+Opens an SSH connection to the provided environment.
+
+Options:
+
+  -e, --environment    environment to connect to
+  -h, --help           output help information
+
+Environments:
+
+$(list_of_environments | sed 's/^/  /')
+
+EOF
+}
+
+connect_main() {
+  while [ $# -gt 0 ]; do
+    local arg="$1"
+
+    case "$arg" in
+      -h|--help)
+        connect_usage
+        exit
+        ;;
+
+      -e|--environment)
+        if [ -z "${2:-}" ]; then
+          abort "missing value for option: $arg"
+        fi
+
+        # shellcheck disable=SC2034
+        environment="$2"
+        shift
+        ;;
+
+      *)
+        abort "unknown option: $arg"
+        ;;
+    esac
+
+    shift
+  done
+
+  load_environment
+
+  connect
+}

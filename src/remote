@@ -1,0 +1,92 @@
+# shellcheck shell=bash
+# vim: ft=sh
+
+preflight() {
+  if [ -z "${user:-}" ]; then
+    abort "missing config: user"
+  fi
+
+  if [ -z "${host:-}" ]; then
+    abort "missing config: host"
+  fi
+
+  if [ -z "${path:-}" ]; then
+    abort "missing config: path"
+  fi
+
+  if [ -z "${repo:-}" ]; then
+    abort "missing config: repo"
+  fi
+
+  if [ -z "${branch:-}" ]; then
+    abort "missing config: branch"
+  fi
+}
+
+check_for_ssh_identity() {
+  if [ "${forward_agent:?}" != true ]; then
+    return
+  fi
+
+  set +o pipefail
+  if ssh-add -l | grep -q "agent has no identities"; then
+    puterr "SSH agent forwarding is enabled but no identity was found in your local SSH agent."
+    puterr "To add your identity, run:"
+    puterr
+    puterr "  ssh-add"
+    puterr "  bin/ship clean-sockets"
+    puterr
+    puterr "Then try again."
+    abort
+  fi
+  set -o pipefail
+}
+
+ssh_command() {
+  preflight
+
+  local url="${user:?}@${host:?}"
+  local command=( ssh )
+
+  [ "$forward_agent" = true ] && command+=( "-A" )
+  [ -n "${identity:-}" ]      && command+=( "-i $identity" )
+  [ -n "${port:-}" ]          && command+=( "-p $port" )
+  [ "${needs_tty:-}" = true ] && command+=( "-t" )
+
+  # Persist sockets
+  if [ "${persist_socket:?}" = true ]; then
+    command+=( "-o ControlMaster=auto" )
+    command+=( "-o ControlPath=$sockets_path/%r@%h-%p" )
+    command+=( "-o ControlPersist=60" )
+  fi
+
+  command+=( "$url" )
+
+  echo "${command[@]}"
+}
+
+run() {
+  check_for_ssh_identity
+
+  local job="$1"
+  local cmd
+
+  cmd="$(ssh_command)"
+
+  echo "$cmd" "\"$job\"" >> "${log_file:?}"
+
+  # shellcheck disable=SC2086
+  $cmd $job | tee -a "$log_file"
+}
+
+connect() {
+  check_for_ssh_identity
+
+  local shell
+  shell="$(ssh_command)"
+
+  log "$shell -t \"cd ${path:?}; \$SHELL --login\""
+
+  # shellcheck disable=SC2086
+  exec $shell -t "cd ${path:?}; \$SHELL --login"
+}

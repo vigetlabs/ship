@@ -1,0 +1,8 @@
+# shellcheck shell=bash
+# vim: ft=sh
+
+version="0.0.1"
+
+version_line() {
+  echo "⛵️ Ship $version"
+}

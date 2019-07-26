@@ -1,0 +1,16 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# vim: ft=sh
+
+install_composer_packages() {
+  info "Installing Composer packages"
+  run "cd $release_path && composer install --quiet"
+}
+
+restart_php() {
+  local unit
+  unit=$(run "systemctl list-units | grep -E 'php.{3}-fpm' | cut -d' ' -f1 | sed 's/.service//'")
+
+  info "Restarting $unit"
+  run "sudo systemctl restart $unit"
+}

@@ -1,0 +1,8 @@
+# shellcheck shell=bash
+# vim: ft=sh
+
+ship_command "update" "update Ship code"
+
+update_main() {
+  echo update
+}

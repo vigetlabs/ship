@@ -1,0 +1,8 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# vim: ft=sh
+
+install_yarn_modules() {
+  info "Installing Node modules via Yarn"
+  run "cd $release_path && yarn install --quiet"
+}

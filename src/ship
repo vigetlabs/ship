@@ -1,0 +1,148 @@
+# shellcheck shell=bash
+# vim: ft=sh
+
+# shellcheck source=defaults
+. "$SHIP_ROOT/src/defaults"
+
+# shellcheck source=output
+. "$SHIP_ROOT/src/output"
+
+# shellcheck source=remote
+. "$SHIP_ROOT/src/remote"
+
+# shellcheck source=version
+. "$SHIP_ROOT/src/version"
+
+# shellcheck source=command
+. "$SHIP_ROOT/src/command"
+
+# shellcheck source=task
+. "$SHIP_ROOT/src/task"
+
+# shellcheck source=common
+. "$SHIP_ROOT/src/common"
+
+trap on_exit EXIT
+
+on_exit() {
+  :
+  # local exit_code="$?"
+
+  # if [ -z "$app_task" ]; then
+  #   return
+  # fi
+
+  # # shellcheck disable=SC2181
+  # if [ $exit_code -eq 0 ]; then
+  #   success "Success!"
+  # else
+  #   failure "Task $app_task failed (exit code $exit_code)"
+  # fi
+}
+
+init_ship() {
+  mkdir -p "$tmp_path" "$sockets_path"
+  touch "$log_file"
+}
+
+load_config() {
+  if [ ! -f "$config_path/config" ]; then
+    abort "missing config file: $config_path/config"
+  fi
+
+  # shellcheck disable=SC1090
+  . "$config_path/config"
+}
+
+init_project() {
+  local type="${1:?}"
+  local lib="$SHIP_ROOT/src/$type/main"
+
+  if [ ! -f "$lib" ]; then
+    abort "unknown project type: $type"
+  fi
+
+  # shellcheck source=wp/main
+  . "$lib"
+}
+
+ship_usage() {
+  cat <<-EOF
+
+Usage: ship [command|task] [options]
+
+Options:
+
+  -V, --version        output program version
+  -h, --help           output help information
+
+Ship Commands:
+
+$(list_of_commands | sed 's/^/  /')
+
+App Tasks:
+
+$(list_of_tasks | sed 's/^/  /')
+
+Environments:
+
+$(list_of_environments | sed 's/^/  /')
+
+Run 'ship [command|task] --help' for more information on a command or task.
+EOF
+}
+
+ship() {
+  init_ship
+  load_config
+
+  local process_args=true
+
+  while [ $# -gt 0 ] && [ $process_args = true ]; do
+    local arg="${1:-}"
+
+    case "$arg" in
+      -h|--help)
+        ship_usage
+        exit
+        ;;
+
+      -V|--version)
+        echo "Ship $version"
+        exit
+        ;;
+
+      "")
+        abort "specify an environment"
+        ;;
+
+      *)
+        if [[ "$arg" =~ ^- ]]; then
+          abort "unknown option: $arg"
+        fi
+
+        if [ -n "${ship_commands[$arg]:-}" ]; then
+          ship_command="$arg"
+        elif [ -n "${app_tasks[$arg]:-}" ]; then
+          app_task="$arg"
+        else
+          abort "unknown command or task: $arg"
+        fi
+
+        process_args=false
+
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "$ship_command" ] && [ -z "$app_task" ]; then
+    abort "specify a command or task"
+  fi
+
+  if [ -n "$ship_command" ]; then
+    run_command "$ship_command" "$@"
+  elif [ -n "$app_task" ]; then
+    run_task "$@"
+  fi
+}

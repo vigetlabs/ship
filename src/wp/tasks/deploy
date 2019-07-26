@@ -1,0 +1,101 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# vim: ft=sh
+
+app_task "deploy" "perform a deploy"
+
+build_assets() {
+  info "Building assets"
+  run "cd $release_path && yarn run gulp production"
+}
+
+link_release() {
+  info "Linking release"
+  run "ln -sfn $release_path/web $path/public && \
+       ln -sfn $release_path     $path/current"
+}
+
+deploy_usage() {
+  cat <<-EOF
+
+Usage: ship deploy [options]
+
+Deploy the application.
+
+Options:
+
+  -e, --environment    environment to deploy to
+  -h, --help           output help information
+  -b, --branch         branch to deploy
+                         default: master
+
+Environments:
+
+$(list_of_environments | sed 's/^/  /')
+
+EOF
+}
+
+deploy_main() {
+  while [ $# -gt -0 ]; do
+    local arg="$1"
+
+    case "$arg" in
+      -h|--help)
+        deploy_usage
+        exit
+        ;;
+
+      -e|--environment)
+        if [ -z "${2:-}" ]; then
+          abort "missing value for option: $arg"
+        fi
+
+        # shellcheck disable=SC2034
+        environment="$2"
+        shift
+        ;;
+
+      -b|--branch)
+        if [ -z "${2:-}" ]; then
+          abort "missing value for option: $arg"
+        fi
+
+        branch="$2"
+        shift
+        ;;
+    esac
+
+    shift
+  done
+
+  load_environment
+
+  perform "deploy"
+}
+
+deploy() {
+  perform "init_deploy"
+  perform "fetch_code"
+  perform "reset_head"
+  perform "create_release"
+  perform "sync_code"
+  perform "mark_revision"
+  perform "link_shared_resources"
+  perform "install_composer_packages"
+  perform "install_yarn_modules"
+  perform "build_assets"
+  perform "link_release"
+  perform "restart_php"
+  perform "clean_releases"
+
+  info "Successfully deployed $branch"
+
+  # if [[ "$ENV" == production ]]; then
+  #   info "notifying slack"
+  #   slack_notify
+  # fi
+
+  # # Done
+  # info "successfully deployed $ref"
+}
